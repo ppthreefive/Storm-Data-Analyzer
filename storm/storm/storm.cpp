@@ -298,15 +298,9 @@ class HashTable
 			{
 				int count = 1;
 
-				while (p != NULL)
+				while (p->next != NULL)
 				{
-					if (p->next != NULL)
-					{
-						count++;
-
-						p = p->next;
-					}
-
+					count++;
 					p = p->next;
 				}
 
@@ -383,11 +377,11 @@ class HashTable
 			}
 
 			// Formula for computing load factor is the (# entries) / (table capacity), should be some number >1.
-			double loadFactor = ((double)chainsNotZero / (double)tableSize);
+			//double loadFactor = ((double)chainsNotZero / (double)tableSize);
 
 			output += "Amount of chains with length greater than zero: " + to_string(chainsNotZero) + "\n";
 			output += "Amount of NULL/unfilled entries in hash table: " + to_string(chains[0]) + "\n";
-			output += "Load factor of the hash table: " + to_string(loadFactor) + "\n";
+			//output += "Load factor of the hash table: " + to_string(loadFactor) + "\n";
 
 			return output;
 		}
@@ -1454,6 +1448,7 @@ int main(int argc, char* argv[])
 
 	// Lets print out a summary of the entire hash table
 	cout << table.summary();
+	cout << "Load factor of the hash table: " << to_string((double)totalEvents / (double)tableSize) << endl;
 
 	// Exit gracefully
 	return 0;
