@@ -51,7 +51,7 @@ struct hash_table_entry {
 };
 
 struct bst { // A binary search tree
-	char *s; // String corresponding to either a state or a month_name
+	string s; // String corresponding to either a state or a month_name
 	int event_id; // Identifier of storm event
 	struct bst *left;  // Pointer to the left subtree
 	struct bst *right;  // Pointer to the right subtree

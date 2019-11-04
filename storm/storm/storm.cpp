@@ -137,7 +137,10 @@ class HashTable
 
 		bool find(int eventID, annual_storms &stormYear) 
 		{
-			int hash = hashFunction(eventID);
+			int hash = 0;
+
+			hash = eventID % tableSize;
+
 			bool found = false;
 
 			hash_table_entry *entry = T[hash];
@@ -194,6 +197,30 @@ class HashTable
 			}
 
 			return found;
+		}
+
+		int findEventIndex(int eventID) 
+		{
+			int hash = hashFunction(eventID);
+			int index = 0;
+
+			hash_table_entry *entry = T[hash];
+
+			if (entry != NULL)
+			{
+				while (entry != NULL)
+				{
+					if (entry->event_id == eventID)
+					{
+						index = entry->event_index;
+						return index;
+					}
+
+					entry = entry->next;
+				}
+			}
+
+			return index;
 		}
 
 		void insert(int event_id, int year, int event_index)
@@ -364,11 +391,342 @@ class HashTable
 
 			return output;
 		}
-			
-		// Deconstructor
-		~HashTable()
+};
+
+class MaxHeap
+{
+	private:
+		int size = 0;
+		int totalHeight = 0;
+		int heightLeft = 0;
+		int heightRight = 0;
+
+	public:
+		storm_event * H;
+
+		MaxHeap(int length) 
 		{
-			delete[] T;
+			H = new storm_event[length];
+			size = length;
+		}
+
+		void buildMaxHeap(string type)
+		{
+			for (int i = (size / 2); i >= 0; i--)
+			{
+				max_heapify(i, type);
+			}
+		}
+
+		void max_heapify(int i, string type)
+		{
+			int left = (2 * i) + 1;
+			int right = (2 * i) + 2;
+			int largest = i;
+
+			int damageLeft = 0;
+			int damageRight = 0;
+			int damageIndex = 0;
+			int damageLargest = 0;
+
+			if (type.find("damage_crops") != string::npos) 
+			{
+				damageLeft = H[left].damage_crops;
+				damageRight = H[right].damage_crops;
+				damageIndex = H[i].damage_crops;
+				damageLargest = 0;
+			}
+			else if (type.find("damage_property") != string::npos)
+			{
+				damageLeft = H[left].damage_property;
+				damageRight = H[right].damage_property;
+				damageIndex = H[i].damage_property;
+				damageLargest = 0;
+			}
+			else if (type.find("fatality") != string::npos) 
+			{
+				if (left < (size - 1) && right < (size - 1)) 
+				{
+					fatality_event *leftTemp = H[left].f;
+					fatality_event *rightTemp = H[right].f;
+
+					while (leftTemp != NULL)
+					{
+						if (leftTemp->fatality_id != 0)
+						{
+							damageLeft++;
+						}
+
+						leftTemp = leftTemp->next;
+					}
+
+					while (rightTemp != NULL)
+					{
+						if (rightTemp->fatality_id != 0)
+						{
+							damageRight++;
+						}
+
+						rightTemp = rightTemp->next;
+					}
+				}
+				
+				fatality_event *indexTemp = H[i].f;
+
+				while (indexTemp != NULL)
+				{
+					if (indexTemp->fatality_id != 0) 
+					{
+						damageIndex++;
+					}
+
+					indexTemp = indexTemp->next;
+				}				
+			}
+
+			if (left <= (size - 1) &&  damageLeft > damageIndex)
+			{
+				largest = left;
+				damageLargest = damageLeft;
+			}
+			else
+			{
+				largest = i;
+				damageLargest = damageIndex;
+			}
+
+			if (right <= (size - 1) && damageRight > damageLargest)
+			{
+				largest = right;
+				damageLargest = damageRight;
+			}
+
+			if (largest != i)
+			{
+				swap(H[i], H[largest]);
+	
+				max_heapify(largest, type);
+			}
+		}
+
+		string extractMax(string type)
+		{
+			int damage = 0;
+			string x = "";
+
+			if (type.find("damage_property") != string::npos) 
+			{
+				damage = H[0].damage_property;
+
+				x = "Event ID: " + to_string(H[0].event_id) + ", Event Type: " + H[0].event_type + ", Amount of damage: $" + to_string(damage) + "\n";
+			}
+			else if (type.find("damage_crops") != string::npos) 
+			{
+				damage = H[0].damage_crops;
+
+				x = "Event ID: " + to_string(H[0].event_id) + ", Event Type: " + H[0].event_type + ", Amount of damage: $" + to_string(damage) + "\n";
+			}
+			else if (type.find("fatality") != string::npos)
+			{
+				fatality_event *temp = H[0].f;
+
+				while (temp != NULL)
+				{
+					if (temp->fatality_id == 0)
+					{
+						x = "No fatalities.";
+					}
+					else
+					{
+						string typeFat(1, temp->fatality_type);
+						string sex(1, temp->fatality_sex);
+
+						x += "\nFatality ID: " + to_string(temp->fatality_id) + "\n";
+						x += "Event ID: " + to_string(temp->event_id) + "\n";
+						x += "Fatality Type: " + typeFat + "\n";
+						x += "Fatality Date: " + temp->fatality_date + "\n";
+						x += "Fatality Age: " + to_string(temp->fatality_age) + "\n";
+						x += "Fatality Sex: " + sex + "\n";
+						x += "Fatality Location: " + temp->fatality_location;
+					}
+
+					temp = temp->next;
+				}
+			}
+
+			H[0] = H[size - 1];
+
+			size--;
+
+			max_heapify(0, type);
+
+			return x;
+		}
+
+		void findSubTreeHeight(int index) 
+		{
+			int heightLeft = (int)(size / ((2 * index) + 1));
+			int heightRight = (int)(size / ((2 * index) + 2));
+		}
+
+		int findHeight(int num) 
+		{
+			return ceil(log2(num + 1)) - 1;
+		}
+
+		void summary() 
+		{
+			findSubTreeHeight(0);
+
+			cout << "The total number of nodes in this max heap is: " << size << endl;
+			cout << "The total height of the max heap is: " << findHeight(size) << endl;
+			cout << "The total height of the left subtree is: " << heightLeft << endl;
+			cout << "The total height of the right subtree is: " << heightRight << endl;
+		}
+};
+
+class BinarySearchTree 
+{
+	private:
+		int nodeCount = 0;
+		int heightRoot = 0;
+		int heightLeft = 0;
+		int heightRight = 0;
+
+	public:
+		bst * root;
+
+		BinarySearchTree() 
+		{
+			root = NULL;
+		}
+
+		bst * insert(bst * node, int eventID, string keyWord) 
+		{
+			if (node == NULL)
+			{
+				bst * temp = new bst;
+				temp->event_id = eventID;
+				temp->s = keyWord;
+				temp->left = NULL;
+				temp->right = NULL;
+
+				return temp;
+			}
+
+			if (keyWord < node->s)
+			{
+				node->left = insert(node->left, eventID, keyWord);
+			}
+			else if(keyWord == node->s)
+			{
+				if (eventID < node->event_id) 
+				{
+					node->left = insert(node->left, eventID, keyWord);
+				}
+				else if (eventID > node->event_id)
+				{
+					node->right = insert(node->right, eventID, keyWord);
+				}
+			}
+			else if(keyWord > node->s)
+			{
+				node->right = insert(node->right, eventID, keyWord);
+			}
+
+			return node;
+		}
+
+		int getHeight(bst * root)
+		{
+			if (root == NULL)
+			{
+				return 0;
+			}
+			else
+			{
+				int leftDepth = getHeight(root->left);
+				int rightDepth = getHeight(root->right);
+
+				heightLeft = leftDepth;
+				heightRight = rightDepth;
+
+				if (leftDepth > rightDepth)
+				{
+					return (leftDepth + 1);
+				}
+				else
+				{
+					return (rightDepth + 1);
+				}
+			}
+		}
+
+		void inOrder(bst* root, string low, string high, HashTable T, annual_storms * annual, string fieldName, int numYears) 
+		{
+			string output = "";
+
+			if (root == NULL) 
+			{
+				return;
+			}
+
+			if (low < root->s) 
+			{
+				inOrder(root->left, low, high, T, annual, fieldName, numYears);
+			}
+
+			if (low <= root->s && high >= root->s) 
+			{
+				int indexInArray = T.findEventIndex(root->event_id);
+				int j = 0;
+
+				while (annual[j].events[indexInArray].event_id != root->event_id) 
+				{
+					j++;
+				}
+
+				if (fieldName.find("state") != string::npos) 
+				{
+					output += "\nState: " + annual[j].events[indexInArray].state + "\n";
+					output += "Event ID: " + to_string(annual[j].events[indexInArray].event_id) + "\n";
+					output += "Year: " + to_string(annual[j].events[indexInArray].year) + "\n";
+					output += "Event Type: " + annual[j].events[indexInArray].event_type + "\n";
+					output += "County/Zone Type: ";
+					output += annual[j].events[indexInArray].cz_type + "\n";
+					output += "County/Zone Name: " + annual[j].events[indexInArray].cz_name + "\n";
+
+					cout << output;
+					nodeCount++;
+				}
+				else 
+				{
+					output += "\nMonth: " + annual[j].events[indexInArray].month_name + "\n";
+					output += "Event ID: " + to_string(annual[j].events[indexInArray].event_id) + "\n";
+					output += "Year: " + to_string(annual[j].events[indexInArray].year) + "\n";
+					output += "Event Type: " + annual[j].events[indexInArray].event_type + "\n";
+					output += "County/Zone Type: ";
+					output += annual[j].events[indexInArray].cz_type + "\n";
+					output += "County/Zone Name: " + annual[j].events[indexInArray].cz_name + "\n";
+
+					cout << output;
+					nodeCount++;
+				}
+				
+			}
+
+			if (high > root->s) 
+			{
+				inOrder(root->right, low, high, T, annual, fieldName, numYears);
+			}
+		}
+
+		void summary() 
+		{
+			cout << "The total number of nodes in this binary search tree: " << nodeCount << endl;
+			cout << "Height of the binary search tree from the root: " << getHeight(root) << endl;
+			cout << "Height of the left subtree: " << heightLeft << endl;
+			cout << "Height of the right subtree: " << heightRight << endl;
 		}
 };
 
@@ -376,18 +734,18 @@ class HashTable
 int convertDamage(string damage) 
 {
 	// Set it to this value just in case there is a number, but no K or M.
-	int actualDamage = atoi(damage.c_str());
+	double actualDamage = atof(damage.c_str());
 
 	if (damage.find("K") != string::npos) 
 	{
-		actualDamage = atoi(damage.c_str()) * 1000;
+		actualDamage = atof(damage.c_str()) * 1000;
 	}
 	else if (damage.find("M") != string::npos)
 	{
-		actualDamage = atoi(damage.c_str()) * 1000000;
+		actualDamage = atof(damage.c_str()) * 1000000;
 	}
 
-	return actualDamage;
+	return (int)actualDamage;
 }
 
 /*	This function is from prime.cc, and I'm using it to bruteforce finding a prime number for my hashtable	*/
@@ -634,35 +992,70 @@ int main(int argc, char* argv[])
 {
 	// Initialize dynamic arrays and variables
 	const char** arguments;
-	arguments = new const char*[argc - 3];
-	annual_storms *annual = new annual_storms[argc - 3];
-	int *eventNums = new int[argc - 3];
+
+	int numArg = argc - 2; // Gets number of arguments that arent the program title and number following it
+
+	int numberOfYears = atoi(argv[1]);
+
+	arguments = new const char*[numArg];
+
+	annual_storms *annual = new annual_storms[numberOfYears];
+	int *eventNums = new int[numArg];
 	int totalEvents = 0;
 
 	int j = 0;
 
 	// Put the years part of the arguments into its own array
-	for (int i = 3; i < argc; i++)
+	for (int i = 2; i < argc; i++)
 	{
 		arguments[j] = argv[i];
 		j++;
 	}
 
+	// Ensuring that the amount of years specified is equal to the amount of years actually input in command line
+	if (j != numberOfYears) 
+	{
+		cout << "ERROR: Command line argument for amount of years," << j << ", does not match the following input of years: " << endl;
+
+		for (int e = 0; e < j; e++)
+		{
+			cout << "\t" << arguments[e] << endl;
+		}
+
+		cout << "Please re-execute the program with the proper command line syntax: " << endl;
+		cout << "ex: './storm 3 1950 1951 1952', where the last three integers represent the years to examine," << endl 
+						<< "\tand the first number represents the amount of years to examine.";
+
+		return 0;
+	}
+
+	// Checks to see if the years properly fall within range of 1950 - 2019
+	for (int i = 0; i < numberOfYears; i++)
+	{
+		if (atoi(arguments[i]) < 1950 && atoi(arguments[i]) > 2019)
+		{
+			cout << "ERROR: A year that was input, " << arguments[i] << ", is not within the range 1950-2019." << endl;
+			cout << "\tPlease re-execute the program, and specify years that fall within 1950-2019 in the command line arguments." << endl;
+
+			return 0;
+		}
+	}
+
 	// Convert the years strings into integers
-	for (int i = 0; i < (argc - 3); i++)
+	for (int i = 0; i < (numberOfYears); i++)
 	{
 		annual[i].year = atoi(arguments[i]);
 	}
 
 	// Grab the number of events we are expecting so that we can allocate our respective arrays
-	for (int i = 0; i < (argc - 3); i++)
+	for (int i = 0; i < (numArg); i++)
 	{
 		string year = arguments[i];
 		eventNums[i] = getEventCount("details-" + year + ".csv");
 	}
 
 	// Get the total number of events by taking the sum of events from every year
-	for (int k = 0; k < (argc - 3); k++)
+	for (int k = 0; k < (numArg); k++)
 	{
 		totalEvents += eventNums[k];
 	}
@@ -683,7 +1076,7 @@ int main(int argc, char* argv[])
 	HashTable table;
 	
 	// Go through every required annual .csv file specified, and populate our arrays as well as our hash table
-	for (int i = 0; i < (argc - 3); i++)
+	for (int i = 0; i < (numArg); i++)
 	{
 		string year = arguments[i];
 		annual[i].events = readDetails("details-" + year + ".csv", year, eventNums[i], table);
@@ -722,24 +1115,246 @@ int main(int argc, char* argv[])
 			cout << "----------------------------------------------------------------------------------" << endl;
 
 			// Checks to see if the query is "find entry (some integer)"
-			if (command.find("find") != string::npos) 
+			if (command.find("find event") != string::npos) 
 			{
-				if (command.find("event") != string::npos) 
-				{
-					int m = 0;
-					stringstream parseID(command);
-					string word;
-					string * separated = new string[3];
+				int m = 0;
+				stringstream parseID(command);
+				string word;
+				string * separated = new string[3];
 
-					while (getline(parseID, word, ' ')) 
+				while (getline(parseID, word, ' ')) 
+				{
+					separated[m] = word;
+
+					m++;
+
+					if (m > 3) 
+					{
+						cout << "ERROR: command 'find event' must be proceeded only by 1 integer, ex. 'find event 10096220'.";
+						if (q > 0)
+						{
+							q--;
+						}
+						else if (q == 0)
+						{
+							numQueries = numQueries + 1;
+						}
+						break;
+					}
+					else if(!(separated[2].find_first_not_of("0123456789") == string::npos))
+					{
+						cout << "ERROR: The event ID is not an integer." << endl;
+						if (q > 0)
+						{
+							q--;
+						}
+						else if (q == 0)
+						{
+							numQueries = numQueries + 1;
+						}
+						break;
+					}
+				}
+
+				int n = 0;
+
+				while (!table.find(atoi(separated[2].c_str()), annual[n])) 
+				{
+					n++;
+
+					if (n > numberOfYears) 
+					{
+						cout << "Storm event " << separated[2] << " not found." << endl;
+						break;
+					}
+				}
+
+				cout << "----------------------------------------------------------------------------------" << endl;	
+			}
+			else if (command.find("find max") != string::npos)
+			{
+				int m = 0;
+				int z = 0;
+				bool invalid = false;
+				stringstream parse(command);
+				string word;
+				string * separated = new string[5];
+
+				while (getline(parse, word, ' '))
+				{
+					separated[m] = word;
+
+					m++;
+
+					if (m > 5)
+					{
+						cout << "ERROR: command 'find max' must be proceeded by a positive integer, a year (may be specific, or all), and a single word notating the type of damage." << endl;
+						cout << "\tExamples are as follows:" << endl;
+						cout << "\t\tfind max 4 1950 damage_property" << endl;
+						cout << "\t\tfind max 10 all damage_crops" << endl;
+
+						if (q > 0)
+						{
+							q--;
+						}
+						else if (q == 0)
+						{
+							numQueries = numQueries + 1;
+						}
+
+						invalid = true;
+
+						break;
+					}
+				}
+
+				// If we are finding the max fatalities
+				if (command.find("find max fatality") != string::npos)
+				{
+					if (separated[4].find("all") != string::npos)
+					{
+						storm_event * allYears = new storm_event[totalEvents];
+
+						int t = 0;
+
+						for (int k = 0; k < numberOfYears; k++)
+						{
+							for (int p = 0; p < eventNums[k]; p++)
+							{
+								allYears[t] = annual[k].events[p];
+								t++;
+							}
+						}
+
+						MaxHeap heap = MaxHeap(totalEvents);
+
+						heap.H = allYears;
+
+						heap.buildMaxHeap(separated[2]);
+
+						for (int i = 0; i < atoi(separated[3].c_str()); i++)
+						{
+							string output = "";
+
+							output = heap.extractMax(separated[2]);
+
+							cout << output << endl;
+						}
+
+						heap.summary();
+					}
+					else
+					{
+						int index = 0;
+						int year = atoi(separated[4].c_str());
+
+						while (annual[index].year != year)
+						{
+							index++;
+						}
+
+						MaxHeap heap = MaxHeap(eventNums[index]);
+
+						heap.H = annual[index].events;
+
+						heap.buildMaxHeap(separated[2]);
+
+						for (int i = 0; i < atoi(separated[3].c_str()); i++)
+						{
+							string output = "";
+
+							output = heap.extractMax(separated[2]);
+
+							cout << output << endl;
+						}
+
+						heap.summary();
+					}
+				}
+				else if(!invalid)
+				{
+					if (separated[3].find("all") != string::npos)
+					{
+						storm_event * allYears = new storm_event[totalEvents];
+						int t = 0;
+
+						for (int k = 0; k < numberOfYears; k++)
+						{
+							for (int p = 0; p < eventNums[k]; p++)
+							{
+								allYears[t] = annual[k].events[p];
+								t++;
+							}
+						}
+
+						MaxHeap heap = MaxHeap(totalEvents);
+
+						heap.H = allYears;
+
+						heap.buildMaxHeap(separated[4]);
+
+						for (int i = 0; i < atoi(separated[2].c_str()); i++)
+						{
+							string output = "";
+
+							output = heap.extractMax(separated[4]);
+
+							cout << output << endl;
+						}
+
+						heap.summary();
+					}
+					else
+					{
+						int index = 0;
+						int year = atoi(separated[3].c_str());
+
+						while (annual[index].year != year)
+						{
+							index++;
+						}
+
+						MaxHeap heap = MaxHeap(eventNums[index]);
+
+						heap.H = annual[index].events;
+
+						heap.buildMaxHeap(separated[4]);
+
+						for (int i = 0; i < atoi(separated[2].c_str()); i++)
+						{
+							string output = "";
+
+							output = heap.extractMax(separated[4]);
+
+							cout << output << endl;
+						}
+
+						heap.summary();
+					}
+				}
+
+				cout << "----------------------------------------------------------------------------------" << endl;
+			}
+			else if (command.find("range") != string::npos)
+			{
+					int m = 0;
+					stringstream parse(command);
+					string word;
+					string * separated = new string[5];
+
+					while (getline(parse, word, ' '))
 					{
 						separated[m] = word;
 
 						m++;
 
-						if (m > 3) 
+						if (m > 5)
 						{
-							cout << "ERROR: command 'find event' must be proceeded only by 1 integer, ex. 'find event 10096220'.";
+							cout << "ERROR: command 'range' must be proceeded by a valid <year>, <field_name>, <low>, <high>" << endl;
+							cout << "\tExamples are as follows:" << endl;
+							cout << "\t\trange 1950 state A C" << endl;
+							cout << "\t\trange all month_name January January" << endl;
+
 							if (q > 0)
 							{
 								q--;
@@ -748,43 +1363,83 @@ int main(int argc, char* argv[])
 							{
 								numQueries = numQueries + 1;
 							}
-							break;
-						}
-						else if(!(separated[2].find_first_not_of("0123456789") == string::npos))
-						{
-							cout << "ERROR: The event ID is not an integer." << endl;
-							if (q > 0)
-							{
-								q--;
-							}
-							else if (q == 0)
-							{
-								numQueries = numQueries + 1;
-							}
+
 							break;
 						}
 					}
 
-					int n = 0;
+					BinarySearchTree bst = BinarySearchTree();
 
-					while (!table.find(atoi(separated[2].c_str()), annual[n])) 
+					if (separated[1].find("all") != string::npos) 
 					{
-						n++;
+						storm_event * allYears = new storm_event[totalEvents];
+						int t = 0;
 
-						if (n > (argc - 3)) 
+						for (int k = 0; k < numberOfYears; k++)
 						{
-							cout << "Storm event " << separated[2] << " not found." << endl;
-							break;
+							for (int p = 0; p < eventNums[k]; p++)
+							{
+								allYears[t] = annual[k].events[p];
+								t++;
+							}
 						}
+
+						if (separated[2].find("month_name") != string::npos) 
+						{
+							for (int i = 0; i < totalEvents; i++)
+							{
+								bst.root = bst.insert(bst.root, allYears[i].event_id, allYears[i].month_name);
+							}
+						}
+						else if (separated[2].find("state") != string::npos)
+						{
+							for (int i = 0; i < totalEvents; i++)
+							{
+								bst.root = bst.insert(bst.root, allYears[i].event_id, allYears[i].state);
+							}
+						}
+						
+						bst.inOrder(bst.root, separated[3], separated[4], table, annual, separated[2], numberOfYears);
+						bst.summary();
+					}
+					else 
+					{
+						int index = 0;
+						int year = atoi(separated[1].c_str());
+
+						while (annual[index].year != year)
+						{
+							index++;
+						}
+
+						if (separated[2].find("month_name") != string::npos)
+						{
+							for (int i = 0; i < eventNums[index] - 1; i++)
+							{
+								bst.root = bst.insert(bst.root, annual[index].events[i].event_id, annual[index].events[i].month_name);
+							}
+						}
+						else if (separated[2].find("state") != string::npos)
+						{
+							for (int i = 0; i < eventNums[index] - 1; i++)
+							{
+								bst.root = bst.insert(bst.root, annual[index].events[i].event_id, annual[index].events[i].state);
+							}
+						}
+
+						bst.inOrder(bst.root, separated[3], separated[4], table, annual, separated[2], numberOfYears);
+						bst.summary();
 					}
 
 					cout << "----------------------------------------------------------------------------------" << endl;
-				}
-			} // There are else if's here when the other queries are implemented
+			}
 			else 
 			{
 				// Gives an error if the query entered is not supported, and then prints a list of supported queries
 				cout << "ERROR: Supported commands are as follows: \n" << "\t 'find event (any positive integer)'\n";
+				cout << "\t 'find max fatality <number of maxes> <year specified OR 'all'>\n";
+				cout << "\t 'find max <number of maxes> <year specified OR 'all'> <'damage_type'>\n";
+				cout << "\t 'range <year specified OR 'all'> <String low> <String high>\n";
 				if (q > 0)
 				{
 					q--;
